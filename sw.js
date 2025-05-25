@@ -1,47 +1,52 @@
-const CACHE_NAME = 'floaty-cloud-v4';
-const URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/sw.js',
-  '/icon-192.png',
-  '/icon-512.png'
+const CACHE = "floaty-cloud-v6";
+const CORE_ASSETS = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png"
 ];
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(URLS))
-  );
-  // activate new SW immediately
+self.addEventListener("install", event => {
   self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => {
-        if (k !== CACHE_NAME) return caches.delete(k);
-      }))
-    )
+    caches.open(CACHE).then(cache => cache.addAll(CORE_ASSETS))
   );
-  // take control of clients without reload
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', event => {
-  // HTML requests: network first, fallback to cache (prevents stale)
-  if (event.request.mode === 'navigate') {
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.map(k => k===CACHE?null:caches.delete(k))
+    )).then(()=> self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", event => {
+  const req = event.request;
+  if (req.mode === "navigate") {
+    // network first for HTML
     event.respondWith(
-      fetch(event.request).then(resp => {
-        const copy = resp.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        return resp;
-      }).catch(() => caches.match(event.request))
+      fetch(req).then(res=>{
+        const copy = res.clone();
+        caches.open(CACHE).then(c=>c.put("/",copy));
+        return res;
+      }).catch(()=> caches.match("/"))
     );
-  } else {
-    // others: cache-first
-    event.respondWith(
-      caches.match(event.request).then(resp => resp || fetch(event.request))
-    );
+    return;
   }
+
+  // static assets: cache first
+  event.respondWith(
+    caches.match(req).then(cached => cached || fetch(req).then(res=>{
+        const copy = res.clone();
+        caches.open(CACHE).then(c=>c.put(req,copy));
+        return res;
+    }))
+  );
+});
+
+// message from page to skip waiting
+self.addEventListener("message", e=>{
+  if(e.data && e.data.type==="SKIP_WAITING") self.skipWaiting();
 });
