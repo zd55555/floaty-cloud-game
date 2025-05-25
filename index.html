@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Floaty Cloud</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4FC3F7">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#4FC3F7;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;}
-        #gameContainer{position:relative;width:100%;height:100vh;max-width:600px;overflow:hidden;}
-        canvas{display:block;width:100%;height:100%;cursor:pointer;}
-        #startScreen,#gameOverScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10;}
-        #startScreen{background:#4FC3F7;}
-        #gameOverScreen{display:none;background:rgba(79,195,247,0.95);}
-        .cloud-character{width:100px;height:100px;position:relative;margin-bottom:30px;}
-        #score{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:48px;color:#fff;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.2);z-index:5;}
-        #backButton{position:absolute;top:40px;left:20px;width:50px;height:50px;background:rgba(255,255,255,0.3);border:none;border-radius:50%;color:#fff;font-size:24px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;}
-        #playButton,#replayButton{background:rgba(255,255,255,0.3);border:none;border-radius:50%;width:80px;height:80px;color:#fff;font-size:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
-        #playButton:active,#replayButton:active{transform:scale(.95);}
-        #replayButton{margin-top:20px;}
-        .game-over-score{font-size:48px;color:#fff;font-weight:bold;margin-bottom:20px;}
-        .instruction{color:#fff;font-size:18px;margin-top:20px;opacity:.8;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floaty Cloud</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4FC3F7">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#4FC3F7;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;}
+#gameContainer{position:relative;width:100%;height:100vh;max-width:600px;overflow:hidden;}
+canvas{display:block;width:100%;height:100%;cursor:pointer;}
+#startScreen,#gameOverScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10;}
+#startScreen{background:#4FC3F7;}
+#gameOverScreen{display:none;background:rgba(79,195,247,0.95);}
+.cloud-character{width:100px;height:100px;position:relative;margin-bottom:30px;}
+#score{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:48px;color:#fff;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.2);z-index:5;}
+#backButton{position:absolute;top:40px;left:20px;width:50px;height:50px;background:rgba(255,255,255,0.3);border:none;border-radius:50%;color:#fff;font-size:24px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;}
+#playButton,#replayButton{background:rgba(255,255,255,0.3);border:none;border-radius:50%;width:80px;height:80px;color:#fff;font-size:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+#playButton:active,#replayButton:active{transform:scale(.95);}
+#replayButton{margin-top:20px;}
+.game-over-score{font-size:48px;color:#fff;font-weight:bold;margin-bottom:20px;}
+.instruction{color:#fff;font-size:18px;margin-top:20px;opacity:.8;}
+</style>
 </head>
 <body>
 <div id="gameContainer">
@@ -35,7 +35,7 @@
             <canvas id="cloudPreview" width="100" height="100"></canvas>
         </div>
         <button id="playButton">▶</button>
-        <div class="instruction">Tap / space to play</div>
+        <div class="instruction">Tap: left/centre/right = ← jump →</div>
     </div>
 
     <div id="gameOverScreen">
@@ -48,357 +48,246 @@
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const startScreen = document.getElementById('startScreen');
-const gameOverScreen = document.getElementById('gameOverScreen');
-const scoreElement = document.getElementById('score');
-const finalScoreElement = document.getElementById('finalScore');
-const playButton = document.getElementById('playButton');
-const replayButton = document.getElementById('replayButton');
-const backButton = document.getElementById('backButton');
-const DPR = window.devicePixelRatio || 1;
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const startScreen=document.getElementById('startScreen');
+const gameOverScreen=document.getElementById('gameOverScreen');
+const scoreElement=document.getElementById('score');
+const finalScoreElement=document.getElementById('finalScore');
+const playButton=document.getElementById('playButton');
+const replayButton=document.getElementById('replayButton');
+const backButton=document.getElementById('backButton');
+const DPR=window.devicePixelRatio||1;
 
 function resizeCanvas(){
-    const container = document.getElementById('gameContainer');
-    canvas.width = container.clientWidth * DPR;
-    canvas.height = container.clientHeight * DPR;
-    canvas.style.width = container.clientWidth + 'px';
-    canvas.style.height = container.clientHeight + 'px';
-    ctx.setTransform(DPR,0,0,DPR,0,0); // reset transform & scale for Hi‑DPI
+  const container=document.getElementById('gameContainer');
+  canvas.width=container.clientWidth*DPR;
+  canvas.height=container.clientHeight*DPR;
+  canvas.style.width=container.clientWidth+'px';
+  canvas.style.height=container.clientHeight+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 resizeCanvas();
 window.addEventListener('resize',resizeCanvas);
 
-// ---------- GAME STATE ----------
-let gameRunning=false;
-let score=0;
-let frameCount=0;
-let gameSpeed=3;
-let gravity=0.5;
-let lift=-10;
-const umbrellaHits=2;
+// ---------- STATE ----------
+let gameRunning=false, score=0, frameCount=0, gameSpeed=3;
+const gravity=0.5, lift=-10;
+const cloud={x:120,y:canvas.height/2,width:60,height:50,vy:0,winking:false,winkTimer:0,umbrella:true,hits:0};
+let obstacles=[], particles=[], bgClouds=[];
 
-const cloud={
-  x:120,
-  y:canvas.height/2,
-  width:60,
-  height:50,
-  velocity:0,
-  rotation:0,
-  umbrellaIntact:true,
-  hits:0,
-  winking:false,
-  winkTimer:0
-};
-
-let obstacles=[];
-let backgroundClouds=[];
-let particles=[];
-
-// ---------- HELPERS ----------
 function rand(min,max){return Math.random()*(max-min)+min;}
 
-// ---------- INIT BACKGROUND ----------
-function initBackgroundClouds(){
-    backgroundClouds=[];
-    for(let i=0;i<8;i++){
-        backgroundClouds.push({
-            x:rand(0,canvas.width),
-            y:rand(0,canvas.height),
-            width:rand(50,150),
-            height:rand(20,60),
-            speed:rand(.2,.7),
-            opacity:rand(.1,.4)
-        });
-    }
+// background clouds
+function initBG(){
+  bgClouds=[];
+  for(let i=0;i<8;i++){
+    bgClouds.push({x:rand(0,canvas.width),y:rand(0,canvas.height),w:rand(50,150),h:rand(20,60),speed:rand(.2,.7),o:rand(.1,.4)});
+  }
 }
-initBackgroundClouds();
+initBG();
 
-// ---------- DRAW FUNCTIONS ----------
-function drawCloud(gctx,x,y,scale=1,isWinking=false,umbrella=cloud.umbrellaIntact){
-    const c=gctx;
-    c.save();
-    c.translate(x,y);
-    c.scale(scale,scale);
-
-    // body
-    c.fillStyle='white';
-    c.beginPath();
-    c.arc(0,0,25,0,Math.PI*2);
-    c.arc(-15,-5,18,0,Math.PI*2);
-    c.arc(15,-5,18,0,Math.PI*2);
-    c.arc(0,-15,15,0,Math.PI*2);
-    c.fill();
-
-    // arms
-    c.strokeStyle='white';
-    c.lineWidth=8;
-    c.lineCap='round';
-    c.beginPath();
-    c.moveTo(-20,0);
-    c.lineTo(-35,10);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(20,0);
-    c.lineTo(35,-10);
-    c.stroke();
-
-    // feet
-    c.beginPath();
-    c.moveTo(-10,20); c.lineTo(-10,35);
-    c.moveTo(10,20); c.lineTo(10,35);
-    c.stroke();
-
-    // face
-    c.fillStyle='#333';
-    if(isWinking){
-        c.beginPath(); c.arc(-8,-5,3,0,Math.PI); c.stroke();
-        c.beginPath(); c.arc(8,-5,3,0,Math.PI*2); c.fill();
-    }else{
-        c.beginPath(); c.arc(-8,-5,3,0,Math.PI*2);
-        c.arc(8,-5,3,0,Math.PI*2); c.fill();
-    }
-    c.beginPath();
-    c.arc(0,0,12,0.2*Math.PI,0.8*Math.PI);
-    c.lineWidth=2;
-    c.stroke();
-
-    // umbrella
-    if(umbrella){
-        c.save();
-        c.translate(35,-10);
-        c.rotate(-0.3);
-        c.strokeStyle='#8B4513';
-        c.lineWidth=3;
-        c.beginPath(); c.moveTo(0,0); c.lineTo(0,25); c.stroke();
-        c.fillStyle='#FFD700';
-        c.beginPath(); c.arc(0,0,20,Math.PI,0); c.fill();
-        c.restore();
-    }
-
-    c.restore();
+// drawing
+function drawCloud(gctx,x,y,scale=1,wink=false,umbrella=true){
+  const c=gctx; c.save(); c.translate(x,y); c.scale(scale,scale);
+  c.fillStyle='white';
+  c.beginPath();c.arc(0,0,25,0,2*Math.PI);c.arc(-15,-5,18,0,2*Math.PI);c.arc(15,-5,18,0,2*Math.PI);c.arc(0,-15,15,0,2*Math.PI);c.fill();
+  c.strokeStyle='white';c.lineWidth=8;c.lineCap='round';
+  c.beginPath();c.moveTo(-20,0);c.lineTo(-35,10);c.moveTo(20,0);c.lineTo(35,-10);c.stroke();
+  c.beginPath();c.moveTo(-10,20);c.lineTo(-10,35);c.moveTo(10,20);c.lineTo(10,35);c.stroke();
+  c.fillStyle='#333';
+  if(wink){c.beginPath();c.arc(-8,-5,3,0,Math.PI);c.stroke();c.beginPath();c.arc(8,-5,3,0,2*Math.PI);c.fill();}
+  else{c.beginPath();c.arc(-8,-5,3,0,2*Math.PI);c.arc(8,-5,3,0,2*Math.PI);c.fill();}
+  c.beginPath();c.arc(0,0,12,0.2*Math.PI,0.8*Math.PI);c.lineWidth=2;c.stroke();
+  if(umbrella){
+    c.save();c.translate(35,-10);c.rotate(-0.3);
+    c.strokeStyle='#8B4513';c.lineWidth=3;c.beginPath();c.moveTo(0,0);c.lineTo(0,25);c.stroke();
+    c.fillStyle='#FFD700';c.beginPath();c.arc(0,0,20,Math.PI,0);c.fill();c.restore();
+  }
+  c.restore();
 }
 
-function drawBackgroundClouds(){
-    backgroundClouds.forEach(bc=>{
-        ctx.fillStyle=`rgba(255,255,255,${bc.opacity})`;
-        ctx.beginPath();
-        ctx.arc(bc.x,bc.y,bc.height,0,Math.PI*2);
-        ctx.arc(bc.x+bc.width*0.3,bc.y-bc.height*0.3,bc.height*0.8,0,Math.PI*2);
-        ctx.arc(bc.x+bc.width*0.6,bc.y,bc.height*0.9,0,Math.PI*2);
-        ctx.fill();
-    });
+function drawBG(){
+  bgClouds.forEach(b=>{
+    ctx.fillStyle=`rgba(255,255,255,${b.o})`;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.h,0,2*Math.PI);
+    ctx.arc(b.x+b.w*0.3,b.y-b.h*0.3,b.h*0.8,0,2*Math.PI);
+    ctx.arc(b.x+b.w*0.6,b.y,b.h*0.9,0,2*Math.PI);ctx.fill();
+  });
 }
 
 function drawObstacles(){
-    obstacles.forEach(ob=>{
-        ctx.save();
-        ctx.translate(ob.x,ob.y);
-        if(ob.type==='bird'){
-            ctx.fillStyle='#2C3E50';
-            ctx.beginPath();
-            ctx.ellipse(0,0,25,30,0,0,Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle='white';
-            ctx.beginPath();
-            ctx.ellipse(0,5,15,20,0,0,Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle='#FF6347';
-            ctx.beginPath();
-            ctx.moveTo(-20,-5); ctx.lineTo(-30,0); ctx.lineTo(-20,5); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='white';
-            ctx.beginPath(); ctx.arc(-5,-10,5,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='black';
-            ctx.beginPath(); ctx.arc(-5,-10,2,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#2C3E50';
-            ctx.beginPath(); ctx.ellipse(15,0,10,20,-0.3,0,Math.PI*2); ctx.fill();
-        }else if(ob.type==='thundercloud'){
-            ctx.fillStyle='#4A5568';
-            ctx.beginPath();
-            ctx.arc(0,0,30,0,Math.PI*2);
-            ctx.arc(-20,-5,25,0,Math.PI*2);
-            ctx.arc(20,-5,25,0,Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle='#FFD700';
-            ctx.beginPath();
-            ctx.moveTo(0,20);ctx.lineTo(-10,35);ctx.lineTo(5,35);ctx.lineTo(-5,50);ctx.lineTo(10,30);ctx.lineTo(0,30);ctx.closePath();ctx.fill();
-            ctx.strokeStyle='white';ctx.lineWidth=3;
-            ctx.beginPath();ctx.moveTo(-15,-10);ctx.lineTo(-5,-5);ctx.moveTo(15,-10);ctx.lineTo(5,-5);ctx.stroke();
-            ctx.beginPath();ctx.arc(0,5,10,0.2*Math.PI,0.8*Math.PI,true);ctx.stroke();
-        }else if(ob.type==='raincloud'){
-            ctx.fillStyle='#2D3748';
-            ctx.beginPath();
-            ctx.arc(0,0,25,0,Math.PI*2);
-            ctx.arc(-15,-5,20,0,Math.PI*2);
-            ctx.arc(15,-5,20,0,Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle='#4FC3F7';
-            for(let i=-20;i<=20;i+=10){
-               ctx.beginPath();
-               ctx.arc(i,25+Math.sin(frameCount*0.1+i)*5,3,0,Math.PI*2);
-               ctx.fill();
-            }
+  obstacles.forEach(ob=>{
+    ctx.save();ctx.translate(ob.x,ob.y);
+    switch(ob.type){
+      case'wind':
+        ctx.fillStyle='rgba(255,255,255,0.6)';
+        ctx.beginPath();ctx.arc(0,0,20,0,2*Math.PI);ctx.fill();
+        ctx.strokeStyle='white';ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(0,0,15,0.2*Math.PI,1.6*Math.PI);ctx.stroke();
+        break;
+      case'bird':
+        ctx.fillStyle='#2C3E50';ctx.beginPath();ctx.ellipse(0,0,25,30,0,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle='white';ctx.beginPath();ctx.ellipse(0,5,15,20,0,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle='#FF6347';ctx.beginPath();ctx.moveTo(-20,-5);ctx.lineTo(-30,0);ctx.lineTo(-20,5);ctx.closePath();ctx.fill();
+        ctx.fillStyle='white';ctx.beginPath();ctx.arc(-5,-10,5,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle='black';ctx.beginPath();ctx.arc(-5,-10,2,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle='#2C3E50';ctx.beginPath();ctx.ellipse(15,0,10,20,-0.3,0,2*Math.PI);ctx.fill();
+        break;
+      case'thunder':
+        ctx.fillStyle='#4A5568';ctx.beginPath();
+        ctx.arc(0,0,30,0,2*Math.PI);ctx.arc(-20,-5,25,0,2*Math.PI);ctx.arc(20,-5,25,0,2*Math.PI);ctx.fill();
+        if(ob.striking){
+          ctx.strokeStyle='#FFD700';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(0,20);ctx.lineTo(0,canvas.height/DPR);ctx.stroke();
         }
-        ctx.restore();
-    });
+        break;
+      case'rain':
+        ctx.fillStyle='#2D3748';ctx.beginPath();
+        ctx.arc(0,0,25,0,2*Math.PI);ctx.arc(-15,-5,20,0,2*Math.PI);ctx.arc(15,-5,20,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle='#4FC3F7';
+        for(let i=-20;i<=20;i+=10){
+          ctx.beginPath();ctx.arc(i,25+Math.sin(frameCount*0.1+i)*5,3,0,2*Math.PI);ctx.fill();
+        }
+        break;
+    }
+    ctx.restore();
+  });
 }
 
 function createParticles(px,py){
-    for(let i=0;i<10;i++){
-        particles.push({x:px,y:py,vx:rand(-2.5,2.5),vy:rand(-2.5,2.5),life:30});
-    }
+  for(let i=0;i<10;i++){particles.push({x:px,y:py,vx:rand(-2.5,2.5),vy:rand(-2.5,2.5),life:30});}
 }
 
 function updateParticles(){
-    for(let i=particles.length-1;i>=0;i--){
-        const p=particles[i];
-        p.x+=p.vx; p.y+=p.vy; p.life--;
-        if(p.life<=0){
-            particles.splice(i,1);
-        }else{
-            ctx.fillStyle=`rgba(255,255,255,${p.life/30})`;
-            ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
-        }
-    }
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;
+    if(p.life<=0)particles.splice(i,1);
+    else{ctx.fillStyle=`rgba(255,255,255,${p.life/30})`;ctx.beginPath();ctx.arc(p.x,p.y,3,0,2*Math.PI);ctx.fill();}
+  }
 }
 
-// ---------- GAME LOOP ----------
-function jump(){
-    if(gameRunning){cloud.velocity=lift;}
+// controls
+function jump(){if(gameRunning)cloud.vy=lift;}
+function moveLeft(){cloud.x-=30;}
+function moveRight(){cloud.x+=30;}
+
+function handleTap(e){
+  const rect=canvas.getBoundingClientRect();
+  const x=e.touches?e.touches[0].clientX:e.clientX;
+  const rel=(x-rect.left)/rect.width;
+  if(rel<0.3)moveLeft();
+  else if(rel>0.7)moveRight();
+  else jump();
 }
 
+canvas.addEventListener('click',handleTap);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();handleTap(e);});
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'){jump();}
+  else if(e.code==='ArrowLeft'){moveLeft();}
+  else if(e.code==='ArrowRight'){moveRight();}
+  if(!gameRunning&&(e.code==='Space'||e.code==='ArrowUp'))startGame();
+});
+
+// ---------- LOOP ----------
 function update(){
-    if(!gameRunning)return;
+  if(!gameRunning)return;
 
-    frameCount++;
+  frameCount++;
 
-    // physics
-    cloud.velocity+=gravity;
-    cloud.y+=cloud.velocity;
+  // gravity & movement
+  cloud.vy+=gravity; cloud.y+=cloud.vy;
+  // horizontal bounds
+  cloud.x=Math.max(30,Math.min(canvas.width/DPR-30,cloud.x));
+  // top collision
+  if(cloud.y<=0){gameOver();return;}
+  // bottom
+  if(cloud.y>canvas.height/DPR-30){gameOver();}
 
-    if(cloud.y<30){cloud.y=30;cloud.velocity=0;}
-    if(cloud.y>canvas.height/DPR-30){gameOver();}
+  // wink
+  if(frameCount%120===0){cloud.winking=true;cloud.winkTimer=10;}
+  if(cloud.winkTimer>0){cloud.winkTimer--; if(cloud.winkTimer===0)cloud.winking=false;}
 
-    // wink
-    if(frameCount%120===0){cloud.winking=true;cloud.winkTimer=10;}
-    if(cloud.winkTimer>0){cloud.winkTimer--; if(cloud.winkTimer===0) cloud.winking=false;}
+  // bg move
+  bgClouds.forEach(b=>{b.x-=b.speed;if(b.x+b.w<0){b.x=canvas.width+b.w;b.y=rand(0,canvas.height);}});
 
-    // background clouds
-    backgroundClouds.forEach(bc=>{
-        bc.x-=bc.speed;
-        if(bc.x+bc.width<0){
-            bc.x=canvas.width+bc.width;
-            bc.y=rand(0,canvas.height);
-        }
-    });
+  // obstacle logic
+  for(let i=obstacles.length-1;i>=0;i--){
+    const ob=obstacles[i];
+    ob.x-=ob.speed;
+    if(ob.type==='rain')ob.y-=0.8;
+    if(ob.type==='wind')ob.angle+=0.2;
 
-    // obstacles (iterate backwards to safely splice)
-    for(let i=obstacles.length-1;i>=0;i--){
-        const ob=obstacles[i];
-        ob.x-=ob.speed;
-        if(ob.type==='raincloud'){ob.y-=1;}
-        // off‑screen
-        if(ob.x+ob.width<0 || ob.y+ob.height<0){
-            obstacles.splice(i,1);
-            score++;scoreElement.textContent=score.toString().padStart(6,'0');
-            continue;
-        }
-        // collision
-        if(cloud.x<ob.x+ob.width && cloud.x+cloud.width>ob.x && cloud.y<ob.y+ob.height && cloud.y+cloud.height>ob.y){
-            if(cloud.umbrellaIntact){
-                cloud.hits++;createParticles(cloud.x+cloud.width,cloud.y);
-                if(cloud.hits>=umbrellaHits){cloud.umbrellaIntact=false;}
-                cloud.velocity=-5;
-            }else{
-                gameOver();break;
-            }
-        }
+    // thunder strike timer
+    if(ob.type==='thunder'){
+      if(!ob.striking){ob.strikeTimer--;if(ob.strikeTimer<=0){ob.striking=true;ob.strikeDuration=30;}}
+      else{ob.strikeDuration--;if(ob.strikeDuration<=0)ob.striking=false;}
     }
 
-    // spawn
-    if(frameCount%80===0){
-        const types=['bird','thundercloud','raincloud'];
-        const type=types[Math.floor(Math.random()*types.length)];
-        const yPos=type==='raincloud'? canvas.height/DPR-100 : rand(50,canvas.height/DPR-100);
-        obstacles.push({type,x:canvas.width/DPR+50,y:yPos,width:50,height:50,speed:gameSpeed+(type==='bird'?2:0)});
+    // off-screen
+    if(ob.x+ob.width<0||ob.y+ob.height<0){
+      obstacles.splice(i,1);score++;scoreElement.textContent=score.toString().padStart(6,'0');continue;
     }
 
-    // difficulty
-    if(frameCount%500===0){gameSpeed+=0.5;}
+    // collision box
+    const hit=cloud.x<ob.x+ob.width&&cloud.x+cloud.width>ob.x&&cloud.y<ob.y+ob.height&&cloud.y+cloud.height>ob.y;
+    if(hit){
+      if(ob.type==='wind'){cloud.vy=lift*1.4;ob.hit=true;ob.x=-100;}
+      else if(cloud.umbrella){cloud.hits++;createParticles(cloud.x+cloud.width,cloud.y);if(cloud.hits>=2){cloud.umbrella=false;}cloud.vy=-5;}
+      else{gameOver();break;}
+    }
+
+    // lightning collision
+    if(ob.type==='thunder'&&ob.striking){
+      if(Math.abs(cloud.x-(ob.x))<25&&cloud.y>ob.y){gameOver();break;}
+    }
+  }
+
+  // difficulty ramp
+  if(frameCount%600===0){gameSpeed+=0.5;}
+
+  // spawn pattern adjustment with progression
+  if(frameCount%90===0){
+    const pool=['bird','rain','wind','thunder'];
+    const type=pool[Math.floor(Math.random()*pool.length)];
+    let yPos;
+    if(type==='rain')yPos=canvas.height/DPR-110;
+    else yPos=rand(60,canvas.height/DPR-150);
+    const ob={type,x:canvas.width/DPR+60,y:yPos,width:60,height:60,speed:gameSpeed+ (type==='bird'?1.5:0)};
+    if(type==='wind'){ob.angle=0;}
+    if(type==='thunder'){ob.strikeTimer=rand(90,150);ob.striking=false;}
+    obstacles.push(ob);
+  }
 }
 
 function render(){
-    ctx.fillStyle='#4FC3F7';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    drawBackgroundClouds();
-
-    if(gameRunning){
-        drawObstacles();
-        drawCloud(ctx,cloud.x,cloud.y,1,cloud.winking);
-        updateParticles();
-    }
+  ctx.fillStyle='#4FC3F7';ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawBG();
+  drawObstacles();
+  drawCloud(ctx,cloud.x,cloud.y,1,cloud.winking,cloud.umbrella);
+  updateParticles();
 }
+function loop(){update();render();requestAnimationFrame(loop);}loop();
 
-function loop(){
-    update();
-    render();
-    requestAnimationFrame(loop);
-}
-loop();
-
-// ---------- STATE CHANGES ----------
+// ---------- GAME STATE ----------
 function startGame(){
-    startScreen.style.display='none';
-    gameOverScreen.style.display='none';
-    gameRunning=true;
-    score=0;frameCount=0;gameSpeed=3;
-    scoreElement.textContent='000000';
-    cloud.y=canvas.height/DPR/2;
-    cloud.velocity=0;cloud.umbrellaIntact=true;cloud.hits=0;cloud.winking=false;cloud.winkTimer=0;
-    obstacles=[];particles=[];
-    initBackgroundClouds();
+  startScreen.style.display='none';gameOverScreen.style.display='none';gameRunning=true;
+  score=0;frameCount=0;gameSpeed=3;scoreElement.textContent='000000';
+  cloud.x=120;cloud.y=canvas.height/DPR/2;cloud.vy=0;cloud.umbrella=true;cloud.hits=0;cloud.winking=false;cloud.winkTimer=0;
+  obstacles=[];particles=[];initBG();
 }
 
 function gameOver(){
-    gameRunning=false;
-    finalScoreElement.textContent=score.toString().padStart(6,'0');
-    gameOverScreen.style.display='flex';
+  gameRunning=false;finalScoreElement.textContent=score.toString().padStart(6,'0');gameOverScreen.style.display='flex';
 }
 
-// ---------- EVENTS ----------
-canvas.addEventListener('click',jump);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();jump();});
-playButton.addEventListener('click',startGame);
-replayButton.addEventListener('click',startGame);
-backButton.addEventListener('click',()=>{gameRunning=false;startScreen.style.display='flex';gameOverScreen.style.display='none';});
+// preview
+const previewCanvas=document.getElementById('cloudPreview');const pctx=previewCanvas.getContext('2d');
+function previewLoop(){pctx.clearRect(0,0,100,100);drawCloud(pctx,50,50+Math.sin(Date.now()*0.002)*5,1,false,true);requestAnimationFrame(previewLoop);}previewLoop();
 
-document.addEventListener('keydown',e=>{
-    if(e.code==='Space'||e.code==='ArrowUp'){
-        e.preventDefault();
-        if(gameRunning){jump();}
-        else{startGame();}
-    }
-});
-
-// ---------- PREVIEW ----------
-const previewCanvas=document.getElementById('cloudPreview');
-const previewCtx=previewCanvas.getContext('2d');
-function animatePreview(){
-    previewCtx.clearRect(0,0,100,100);
-    previewCtx.save();
-    const bounce=Math.sin(Date.now()*0.002)*5;
-    drawCloud(previewCtx,50,50+bounce,1,false,true);
-    previewCtx.restore();
-    requestAnimationFrame(animatePreview);
-}
-animatePreview();
-
-// ---------- SW REGISTER ----------
-if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(console.error);
-}
+// service worker
+if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js').catch(console.error);}
 </script>
 </body>
 </html>
