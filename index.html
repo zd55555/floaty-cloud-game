@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floaty Cloud</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4FC3F7">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #4FC3F7;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            max-width: 600px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #4FC3F7;
+            z-index: 10;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(79, 195, 247, 0.95);
+            z-index: 10;
+        }
+
+        .cloud-character {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        #score {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 48px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 5;
+        }
+
+        #backButton {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #playButton {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            color: white;
+            font-size: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        #playButton:active {
+            transform: scale(0.95);
+        }
+
+        #replayButton {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            color: white;
+            font-size: 36px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .game-over-score {
+            font-size: 48px;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .instruction {
+            color: white;
+            font-size: 18px;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="startScreen">
+            <div class="cloud-character">
+                <canvas id="cloudPreview" width="100" height="100"></canvas>
+            </div>
+            <button id="playButton">▶</button>
+            <div class="instruction">Tap to play</div>
+        </div>
+        
+        <div id="gameOverScreen">
+            <div class="game-over-score" id="finalScore">0</div>
+            <button id="replayButton">↻</button>
+        </div>
+        
+        <button id="backButton">←</button>
+        <div id="score">0</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreElement = document.getElementById('score');
+        const finalScoreElement = document.getElementById('finalScore');
+        const playButton = document.getElementById('playButton');
+        const replayButton = document.getElementById('replayButton');
+        const backButton = document.getElementById('backButton');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = gameContainer.clientWidth;
+            canvas.height = gameContainer.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Game variables
+        let gameRunning = false;
+        let score = 0;
+        let frameCount = 0;
+        let gameSpeed = 3;
+        let gravity = 0.5;
+        let lift = -10;
+        let umbrellaHits = 2; // Number of hits umbrella can take
+
+        // Cloud character
+        const cloud = {
+            x: 120,
+            y: canvas.height / 2,
+            width: 60,
+            height: 50,
+            velocity: 0,
+            rotation: 0,
+            umbrellaIntact: true,
+            hits: 0,
+            winking: false,
+            winkTimer: 0
+        };
+
+        // Arrays for game objects
+        let obstacles = [];
+        let backgroundClouds = [];
+        let particles = [];
+
+        // Initialize background clouds
+        function initBackgroundClouds() {
+            backgroundClouds = [];
+            for (let i = 0; i < 8; i++) {
+                backgroundClouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    width: Math.random() * 100 + 50,
+                    height: Math.random() * 40 + 20,
+                    speed: Math.random() * 0.5 + 0.2,
+                    opacity: Math.random() * 0.3 + 0.1
+                });
+            }
+        }
+
+        // Draw cloud character
+        function drawCloud(x, y, scale = 1, isWinking = false) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            
+            // Cloud body
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            // Main body
+            ctx.arc(0, 0, 25, 0, Math.PI * 2);
+            ctx.arc(-15, -5, 18, 0, Math.PI * 2);
+            ctx.arc(15, -5, 18, 0, Math.PI * 2);
+            ctx.arc(0, -15, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Arms
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            
+            // Left arm
+            ctx.beginPath();
+            ctx.moveTo(-20, 0);
+            ctx.lineTo(-35, 10);
+            ctx.stroke();
+            
+            // Right arm (holding umbrella)
+            ctx.beginPath();
+            ctx.moveTo(20, 0);
+            ctx.lineTo(35, -10);
+            ctx.stroke();
+            
+            // Feet
+            ctx.beginPath();
+            ctx.moveTo(-10, 20);
+            ctx.lineTo(-10, 35);
+            ctx.moveTo(10, 20);
+            ctx.lineTo(10, 35);
+            ctx.stroke();
+            
+            // Face
+            ctx.fillStyle = '#333';
+            
+            // Eyes
+            if (isWinking) {
+                // Left eye winking
+                ctx.beginPath();
+                ctx.arc(-8, -5, 3, 0, Math.PI);
+                ctx.stroke();
+                // Right eye normal
+                ctx.beginPath();
+                ctx.arc(8, -5, 3, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Both eyes open
+                ctx.beginPath();
+                ctx.arc(-8, -5, 3, 0, Math.PI * 2);
+                ctx.arc(8, -5, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Smile
+            ctx.beginPath();
+            ctx.arc(0, 0, 12, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Umbrella (if intact)
+            if (cloud.umbrellaIntact) {
+                ctx.save();
+                ctx.translate(35, -10);
+                ctx.rotate(-0.3);
+                
+                // Handle
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 25);
+                ctx.stroke();
+                
+                // Umbrella top
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, Math.PI, 0);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            ctx.restore();
+        }
+
+        // Draw background clouds
+        function drawBackgroundClouds() {
+            backgroundClouds.forEach(cloud => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${cloud.opacity})`;
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.height, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.3, cloud.y - cloud.height * 0.3, cloud.height * 0.8, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.6, cloud.y, cloud.height * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw obstacles
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.save();
+                ctx.translate(obstacle.x, obstacle.y);
+                
+                if (obstacle.type === 'bird') {
+                    // Draw penguin-like bird
+                    ctx.fillStyle = '#2C3E50';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 25, 30, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // White belly
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 5, 15, 20, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Beak
+                    ctx.fillStyle = '#FF6347';
+                    ctx.beginPath();
+                    ctx.moveTo(-20, -5);
+                    ctx.lineTo(-30, 0);
+                    ctx.lineTo(-20, 5);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Eyes
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(-5, -10, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(-5, -10, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Wings
+                    ctx.fillStyle = '#2C3E50';
+                    ctx.beginPath();
+                    ctx.ellipse(15, 0, 10, 20, -0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                } else if (obstacle.type === 'thundercloud') {
+                    // Thunder cloud with angry face
+                    ctx.fillStyle = '#4A5568';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                    ctx.arc(-20, -5, 25, 0, Math.PI * 2);
+                    ctx.arc(20, -5, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Lightning bolt
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.moveTo(0, 20);
+                    ctx.lineTo(-10, 35);
+                    ctx.lineTo(5, 35);
+                    ctx.lineTo(-5, 50);
+                    ctx.lineTo(10, 30);
+                    ctx.lineTo(0, 30);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Angry eyes
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-15, -10);
+                    ctx.lineTo(-5, -5);
+                    ctx.moveTo(15, -10);
+                    ctx.lineTo(5, -5);
+                    ctx.stroke();
+                    
+                    // Frown
+                    ctx.beginPath();
+                    ctx.arc(0, 5, 10, 0.2 * Math.PI, 0.8 * Math.PI, true);
+                    ctx.stroke();
+                    
+                } else if (obstacle.type === 'raincloud') {
+                    // Dark rain cloud that floats upward
+                    ctx.fillStyle = '#2D3748';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                    ctx.arc(-15, -5, 20, 0, Math.PI * 2);
+                    ctx.arc(15, -5, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Rain drops
+                    ctx.fillStyle = '#4FC3F7';
+                    for (let i = -20; i <= 20; i += 10) {
+                        ctx.beginPath();
+                        ctx.arc(i, 25 + Math.sin(frameCount * 0.1 + i) * 5, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                ctx.restore();
+            });
+        }
+
+        // Create particles when hit
+        function createParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    life: 30
+                });
+            }
+        }
+
+        // Update and draw particles
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${particle.life / 30})`;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Game update
+        function update() {
+            if (!gameRunning) return;
+            
+            frameCount++;
+            
+            // Update cloud physics
+            cloud.velocity += gravity;
+            cloud.y += cloud.velocity;
+            
+            // Boundary check
+            if (cloud.y < 30) {
+                cloud.y = 30;
+                cloud.velocity = 0;
+            }
+            if (cloud.y > canvas.height - 30) {
+                gameOver();
+            }
+            
+            // Update cloud rotation based on velocity
+            cloud.rotation = cloud.velocity * 0.05;
+            
+            // Winking animation
+            if (frameCount % 120 === 0) {
+                cloud.winking = true;
+                cloud.winkTimer = 10;
+            }
+            if (cloud.winkTimer > 0) {
+                cloud.winkTimer--;
+                if (cloud.winkTimer === 0) {
+                    cloud.winking = false;
+                }
+            }
+            
+            // Update background clouds
+            backgroundClouds.forEach(bgCloud => {
+                bgCloud.x -= bgCloud.speed;
+                if (bgCloud.x + bgCloud.width < 0) {
+                    bgCloud.x = canvas.width + bgCloud.width;
+                    bgCloud.y = Math.random() * canvas.height;
+                }
+            });
+            
+            // Update obstacles
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= obstacle.speed;
+                
+                // Special movement for rain clouds
+                if (obstacle.type === 'raincloud') {
+                    obstacle.y -= 1; // Float upward
+                }
+                
+                // Remove off-screen obstacles
+                if (obstacle.x + obstacle.width < 0 || obstacle.y + obstacle.height < 0) {
+                    obstacles.splice(index, 1);
+                    score++;
+                    scoreElement.textContent = score.toString().padStart(6, '0');
+                }
+                
+                // Collision detection
+                if (cloud.x < obstacle.x + obstacle.width &&
+                    cloud.x + cloud.width > obstacle.x &&
+                    cloud.y < obstacle.y + obstacle.height &&
+                    cloud.y + cloud.height > obstacle.y) {
+                    
+                    if (cloud.umbrellaIntact) {
+                        cloud.hits++;
+                        createParticles(cloud.x + cloud.width, cloud.y);
+                        if (cloud.hits >= umbrellaHits) {
+                            cloud.umbrellaIntact = false;
+                        }
+                        // Bounce back slightly
+                        cloud.velocity = -5;
+                    } else {
+                        gameOver();
+                    }
+                }
+            });
+            
+            // Spawn obstacles
+            if (frameCount % 80 === 0) {
+                const types = ['bird', 'thundercloud', 'raincloud'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                let yPos;
+                
+                if (type === 'raincloud') {
+                    yPos = canvas.height - 100; // Start from bottom
+                } else {
+                    yPos = Math.random() * (canvas.height - 100) + 50;
+                }
+                
+                obstacles.push({
+                    type: type,
+                    x: canvas.width + 50,
+                    y: yPos,
+                    width: 50,
+                    height: 50,
+                    speed: gameSpeed + (type === 'bird' ? 2 : 0)
+                });
+            }
+            
+            // Increase difficulty
+            if (frameCount % 500 === 0) {
+                gameSpeed += 0.5;
+            }
+        }
+
+        // Render game
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#4FC3F7';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background elements
+            drawBackgroundClouds();
+            
+            // Draw game elements
+            if (gameRunning) {
+                drawObstacles();
+                drawCloud(cloud.x, cloud.y, 1, cloud.winking);
+                updateParticles();
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            gameRunning = true;
+            score = 0;
+            frameCount = 0;
+            gameSpeed = 3;
+            scoreElement.textContent = '000000';
+            
+            // Reset cloud
+            cloud.y = canvas.height / 2;
+            cloud.velocity = 0;
+            cloud.umbrellaIntact = true;
+            cloud.hits = 0;
+            cloud.winking = false;
+            cloud.winkTimer = 0;
+            
+            // Clear arrays
+            obstacles = [];
+            particles = [];
+            initBackgroundClouds();
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score.toString().padStart(6, '0');
+            gameOverScreen.style.display = 'flex';
+        }
+
+        // Controls
+        function jump() {
+            if (gameRunning) {
+                cloud.velocity = lift;
+            }
+        }
+
+        // Event listeners
+        canvas.addEventListener('click', jump);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            jump();
+        });
+
+        playButton.addEventListener('click', startGame);
+        replayButton.addEventListener('click', startGame);
+        backButton.addEventListener('click', () => {
+            gameRunning = false;
+            startScreen.style.display = 'flex';
+            gameOverScreen.style.display = 'none';
+        });
+
+        // Draw preview cloud
+        function drawPreviewCloud() {
+            const previewCanvas = document.getElementById('cloudPreview');
+            const previewCtx = previewCanvas.getContext('2d');
+            previewCtx.clearRect(0, 0, 100, 100);
+            drawCloud.call({ ctx: previewCtx }, 50, 50, 1, false);
+        }
+
+        // Initialize
+        initBackgroundClouds();
+        gameLoop();
+        
+        // Draw the preview cloud on start screen
+        const previewCanvas = document.getElementById('cloudPreview');
+        const previewCtx = previewCanvas.getContext('2d');
+        
+        function animatePreview() {
+            previewCtx.clearRect(0, 0, 100, 100);
+            previewCtx.fillStyle = 'white';
+            previewCtx.save();
+            
+            // Bouncing animation
+            const bounce = Math.sin(Date.now() * 0.002) * 5;
+            previewCtx.translate(50, 50 + bounce);
+            
+            // Draw cloud body
+            previewCtx.beginPath();
+            previewCtx.arc(0, 0, 25, 0, Math.PI * 2);
+            previewCtx.arc(-15, -5, 18, 0, Math.PI * 2);
+            previewCtx.arc(15, -5, 18, 0, Math.PI * 2);
+            previewCtx.arc(0, -15, 15, 0, Math.PI * 2);
+            previewCtx.fill();
+            
+            // Draw umbrella
+            previewCtx.save();
+            previewCtx.translate(35, -10);
+            previewCtx.rotate(-0.3);
+            
+            // Handle
+            previewCtx.strokeStyle = '#8B4513';
+            previewCtx.lineWidth = 3;
+            previewCtx.beginPath();
+            previewCtx.moveTo(0, 0);
+            previewCtx.lineTo(0, 25);
+            previewCtx.stroke();
+            
+            // Umbrella top
+            previewCtx.fillStyle = '#FFD700';
+            previewCtx.beginPath();
+            previewCtx.arc(0, 0, 20, Math.PI, 0);
+            previewCtx.fill();
+            
+            previewCtx.restore();
+            
+            // Draw arms
+            previewCtx.strokeStyle = 'white';
+            previewCtx.lineWidth = 8;
+            previewCtx.lineCap = 'round';
+            
+            // Left arm
+            previewCtx.beginPath();
+            previewCtx.moveTo(-20, 0);
+            previewCtx.lineTo(-35, 10);
+            previewCtx.stroke();
+            
+            // Right arm (holding umbrella)
+            previewCtx.beginPath();
+            previewCtx.moveTo(20, 0);
+            previewCtx.lineTo(35, -10);
+            previewCtx.stroke();
+            
+            // Draw feet
+            previewCtx.beginPath();
+            previewCtx.moveTo(-10, 20);
+            previewCtx.lineTo(-10, 35);
+            previewCtx.moveTo(10, 20);
+            previewCtx.lineTo(10, 35);
+            previewCtx.stroke();
+            
+            // Draw face
+            previewCtx.fillStyle = '#333';
+            previewCtx.lineWidth = 2;
+            
+            // Winking animation
+            if (Math.floor(Date.now() / 2000) % 2 === 0) {
+                // Wink
+                previewCtx.beginPath();
+                previewCtx.arc(-8, -5, 3, 0, Math.PI);
+                previewCtx.stroke();
+                previewCtx.beginPath();
+                previewCtx.arc(8, -5, 3, 0, Math.PI * 2);
+                previewCtx.fill();
+            } else {
+                // Both eyes open
+                previewCtx.beginPath();
+                previewCtx.arc(-8, -5, 3, 0, Math.PI * 2);
+                previewCtx.arc(8, -5, 3, 0, Math.PI * 2);
+                previewCtx.fill();
+            }
+            
+            // Smile
+            previewCtx.beginPath();
+            previewCtx.arc(0, 0, 12, 0.2 * Math.PI, 0.8 * Math.PI);
+            previewCtx.stroke();
+            
+            previewCtx.restore();
+            
+            requestAnimationFrame(animatePreview);
+        }
+        
+        animatePreview();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed'));
+        }
+    </script>
+</body>
+</html>
