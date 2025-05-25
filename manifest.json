@@ -3,6 +3,7 @@
   "short_name": "Floaty Cloud",
   "description": "Help the cute cloud with an umbrella float through the sky!",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#4FC3F7",
   "theme_color": "#4FC3F7",

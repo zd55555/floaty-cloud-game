@@ -1,49 +1,33 @@
-const CACHE_NAME = 'floaty-cloud-v1';
-const urlsToCache = [
+const CACHE_NAME='floaty-cloud-v2';
+const urlsToCache=[
   '/',
   '/index.html',
   '/manifest.json',
+  '/sw.js',
   '/icon-192.png',
   '/icon-512.png'
 ];
 
-// Install event - cache files
-self.addEventListener('install', event => {
+self.addEventListener('install',event=>{
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(cache=>cache.addAll(urlsToCache))
   );
 });
 
-// Fetch event - serve from cache when offline
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch',event=>{
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
+    caches.match(event.request).then(resp=>{
+      return resp||fetch(event.request);
+    })
   );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
+self.addEventListener('activate',event=>{
+  const keep=[CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then(names=>{
       return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
+        names.map(n=>{if(!keep.includes(n))return caches.delete(n);})
       );
     })
   );
